@@ -37,7 +37,7 @@ enum class StringExpressionType { Lower, Upper };
  */
 class StringExpression : public AbstractExpression {
  public:
-  StringExpression(AbstractExpressionRef arg, StringExpressionType expr_type)
+  StringExpression(std::vector<std::shared_ptr<AbstractExpression>> arg, StringExpressionType expr_type)
       : AbstractExpression({std::move(arg)}, TypeId::VARCHAR), expr_type_{expr_type} {
     if (GetChildAt(0)->GetReturnType() != TypeId::VARCHAR) {
       throw bustub::NotImplementedException("expect the first arg to be varchar");
@@ -46,7 +46,13 @@ class StringExpression : public AbstractExpression {
 
   auto Compute(const std::string &val) const -> std::string {
     // TODO(student): implement upper / lower.
-    return {};
+    if (expr_type_ == StringExpressionType::Lower) {
+      return StringUtil::Lower(val);
+    }
+    if (expr_type_ == StringExpressionType::Upper) {
+      return StringUtil::Upper(val);
+    }
+    throw bustub::ExecutionException("expect StringExpressionType is either Lower or Upper");
   }
 
   auto Evaluate(const Tuple *tuple, const Schema &schema) const -> Value override {

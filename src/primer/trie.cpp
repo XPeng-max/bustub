@@ -63,8 +63,7 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
     } else {
       if (iter == children.end()) {
         next_node = std::make_shared<TrieNode>();
-      }
-      else {
+      } else {
         next_node = iter->second->Clone();
       }
     }

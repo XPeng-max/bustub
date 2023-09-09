@@ -11,7 +11,7 @@ auto TrieStore::Get(std::string_view key) -> std::optional<ValueGuard<T>> {
   // (2) Lookup the value in the trie.
   // (3) If the value is found, return a ValueGuard object that holds a reference to the value and the
   //     root. Otherwise, return std::nullopt.
-//  throw NotImplementedException("TrieStore::Get is not implemented.");
+  //  throw NotImplementedException("TrieStore::Get is not implemented.");
   std::unique_lock lock(root_lock_);
   auto cur = root_;
   lock.unlock();
