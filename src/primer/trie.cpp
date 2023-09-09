@@ -38,31 +38,38 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
   // You should walk through the trie and create new nodes if necessary. If the node corresponding to the key already
   // exists, you should create a new `TrieNodeWithValue`.
   size_t n = key.size();
-  if (0 == n) {
+  if (n == 0) {
     if (nullptr == root_) {
       return Trie{std::make_shared<TrieNodeWithValue<T>>(std::make_shared<T>(std::move(value)))};
     }
-    return Trie{std::make_shared<TrieNodeWithValue<T>>(root_->children_,std::make_shared<T>(std::move(value)))};
+    return Trie{std::make_shared<TrieNodeWithValue<T>>(root_->children_, std::make_shared<T>(std::move(value)))};
   }
 
   auto root = (root_ == nullptr) ? std::make_shared<TrieNode>() : std::shared_ptr<TrieNode>(root_->Clone());
   auto node = root;
 
-  for (size_t i = 0; i < n - 1; i++) {
+  for (size_t i = 0; i < n; i++) {
     char ch = key[i];
-    auto& children = node->children_;
+    auto &children = node->children_;
     auto iter = children.find(ch);
-    auto nnode = (iter == children.end()) ? std::make_shared<TrieNode>() : std::shared_ptr<TrieNode>(iter->second->Clone());
-
-    children[ch] = nnode;
-    node = nnode;
-  }
-  auto& children = node->children_;
-  if (children.find(key[n - 1]) != node->children_.end()) {
-    children[key[n - 1]] = std::make_shared<TrieNodeWithValue<T>>(children[key[n - 1]]->children_,std::make_shared<T>(std::move(value)));
-  }
-  else {
-    children[key[n - 1]] = std::make_shared<TrieNodeWithValue<T>>(std::make_shared<T>(std::move(value)));
+    std::shared_ptr<TrieNode> next_node;
+    if (i == n - 1) {
+      if (iter == children.end()) {
+        next_node = std::make_shared<TrieNodeWithValue<T>>(std::make_shared<T>(std::move(value)));
+      } else {
+        next_node =
+            std::make_shared<TrieNodeWithValue<T>>(children[ch]->children_, std::make_shared<T>(std::move(value)));
+      }
+    } else {
+      if (iter == children.end()) {
+        next_node = std::make_shared<TrieNode>();
+      }
+      else {
+        next_node = iter->second->Clone();
+      }
+    }
+    children[ch] = next_node;
+    node = next_node;
   }
   return Trie{root};
 }
@@ -76,7 +83,7 @@ auto Trie::Remove(std::string_view key) const -> Trie {
     return Trie{nullptr};
   }
   size_t n = key.size();
-  if (0 == n) {
+  if (n == 0) {
     if (root_->is_value_node_) {
       if (root_->children_.empty()) {
         return Trie{nullptr};
@@ -85,37 +92,41 @@ auto Trie::Remove(std::string_view key) const -> Trie {
     }
     return Trie{root_->Clone()};
   }
-  std::function<std::shared_ptr<TrieNode>(std::shared_ptr<TrieNode>, size_t)> remove_node = [&](std::shared_ptr<TrieNode> node, size_t index) {
-    char ch = key[index];
-    if (node->children_.find(ch) == node->children_.end() || (index == n - 1 && !node->children_[ch]->is_value_node_)) {
-      return node;
-    }
-    auto& child = node->children_[ch];
-    std::shared_ptr<TrieNode> new_child;
+  std::function<std::shared_ptr<TrieNode>(std::shared_ptr<TrieNode>, size_t)> remove_node =
+      [&](std::shared_ptr<TrieNode> node, size_t index) {
+        char ch = key[index];
+        // do not need to delete
+        if (node->children_.find(ch) == node->children_.end() ||
+            (index == n - 1 && !node->children_[ch]->is_value_node_)) {
+          return node;
+        }
+        auto &child = node->children_[ch];
+        std::shared_ptr<TrieNode> new_child;
 
-    if (index == n - 1) {
-      if (!child->children_.empty()) {
-        new_child = std::make_shared<TrieNode>(child->children_);
-      }
-    }
-    else {
-      new_child = remove_node(child->Clone(), index + 1);
-    }
+        // last node
+        if (index == n - 1) {
+          // remove the value
+          if (!child->children_.empty()) {
+            new_child = std::make_shared<TrieNode>(child->children_);
+          }
+        } else {
+          // recursive remove
+          new_child = remove_node(child->Clone(), index + 1);
+        }
 
-    if (new_child) {
-      node->children_[ch] = new_child;
-    }
-    else {
-      node->children_.erase(ch);
-    }
+        if (new_child) {
+          node->children_[ch] = new_child;
+        } else {
+          node->children_.erase(ch);
+        }
 
-    if (node->children_.empty() && !node->is_value_node_) {
-      node = nullptr;
-    }
-    return node;
-  };
+        if (node->children_.empty() && !node->is_value_node_) {
+          node = nullptr;
+        }
+        return node;
+      };
   auto root = remove_node(root_->Clone(), 0);
-  return Trie {root};
+  return Trie{root};
 }
 
 // Below are explicit instantiation of template functions.
